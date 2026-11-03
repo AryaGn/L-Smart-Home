@@ -1,37 +1,37 @@
+
+from audio.wakeword import WakeWordListener
 from audio.listener import listen_once
 from ai.conversation import Conversation
 
 conversation = Conversation()
-
-WAKE_WORD = "l"
+wake_listener = WakeWordListener()
 
 print("======================")
-print("     L IS READY")
+print("     L SMART HOME")
+print("======================")
+print("Assistant: Rotty")
+print("Wake phrase: Hey Jarvis")
+print("Example: Hey Jarvis... turn on the light.")
+print("Press Ctrl+C to exit.")
 print("======================")
 
-while True:
+try:
+    while True:
 
-    text = listen_once()
+        # Wait until the wake phrase is detected
+        wake_listener.wait_for_wake_word()
 
-    if not text:
-        continue
+        # Record the user's command using Whisper
+        text = listen_once()
 
-    print("\nYou said:", text)
+        if not text:
+            print("No command detected. Waiting for wake phrase...")
+            continue
 
-    text_lower = text.lower().strip()
+        print("\nYou said:", text)
 
-    # Wake word detection
-    if not (
-        text_lower.startswith("l ")
-        or text_lower.startswith("l,")
-        or text_lower == "l"
-    ):
-        print("No wake word detected")
-        continue
+        # Send the command to the existing AI pipeline
+        conversation.process(text)
 
-    # Remove wake word
-    command_text = text_lower[1:].strip(" ,")
-
-    print("Command:", command_text)
-
-    conversation.process(command_text)
+except KeyboardInterrupt:
+    print("\nL Smart Home stopped.")

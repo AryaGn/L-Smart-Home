@@ -1,20 +1,29 @@
+
 from config import HOUSE
 
 
 class SmartMapper:
 
     def resolve(self, command):
+        if not isinstance(command, dict):
+            return command
 
         if command.get("intent") != "device_control":
             return command
 
-        room_input = command.get("room", "").lower()
-        device_input = command.get("device", "").lower()
+        room_input = command.get("room")
+        device_input = command.get("device")
+
+        if not isinstance(room_input, str) or not isinstance(device_input, str):
+            return command
+
+        room_input = room_input.strip().lower()
+        device_input = device_input.strip().lower()
 
         matched_room = None
 
-        for room in HOUSE.keys():
-            if room_input in room:
+        for room in HOUSE:
+            if room_input == room.lower():
                 matched_room = room
                 break
 
@@ -23,15 +32,16 @@ class SmartMapper:
 
         matched_device = None
 
-        for device in HOUSE[matched_room].keys():
-            if device_input in device:
+        for device in HOUSE[matched_room]:
+            if device_input == device.lower():
                 matched_device = device
                 break
 
         if not matched_device:
-            matched_device = device_input
+            return command
 
-        command["room"] = matched_room
-        command["device"] = matched_device
+        mapped_command = command.copy()
+        mapped_command["room"] = matched_room
+        mapped_command["device"] = matched_device
 
-        return command
+        return mapped_command

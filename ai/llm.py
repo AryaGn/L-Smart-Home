@@ -1,3 +1,4 @@
+
 import json
 import ollama
 
@@ -11,144 +12,66 @@ class LLM:
 
     def ask(self, user_input):
 
-        system_prompt = """
-You are L, an intelligent AI Smart Home Assistant.
+        system_prompt = f"""
+You are {ASSISTANT_NAME}, an AI-powered smart home assistant.
 
-The user may speak in ANY language or mix multiple languages in the same sentence.
+You interpret natural-language voice commands and return
+structured JSON responses.
 
-Examples include:
-English, Malayalam, Hindi, Tamil, Telugu, Kannada,
-Bengali, Marathi, Gujarati, Punjabi, Urdu,
-Arabic, French, German, Spanish, Portuguese,
-Italian, Dutch, Russian, Chinese, Japanese,
-Korean, Thai, Vietnamese, Turkish and many more.
+The user may speak English or another language.
+Understand multilingual commands when possible.
 
-Your job is to understand the user's intent regardless of language and convert it into JSON.
+CURRENT HARDWARE
+
+This prototype currently controls ONE physical LED
+connected to ESP32 GPIO pin 18.
+
+It does not currently have independently connected
+lights, fans, air conditioners, or multiple rooms.
+
+SUPPORTED COMMANDS
+
+Turn the demo LED ON:
+{{
+    "intent": "device_control",
+    "room": "demo",
+    "device": "light",
+    "action": "on"
+}}
+
+Turn the demo LED OFF:
+{{
+    "intent": "device_control",
+    "room": "demo",
+    "device": "light",
+    "action": "off"
+}}
 
 IMPORTANT RULES
 
 1. Return ONLY valid JSON.
-2. Never explain anything.
-3. Never use markdown.
-4. Never use ``` or ```json.
-5. Never translate the command back into English.
-6. Never return text before or after the JSON.
-7. Always normalize every language into the JSON format below.
-8. Understand spelling mistakes and speech recognition mistakes.
-9. Understand mixed-language commands.
-10. If the user refers to the last room or device ("it", "that", "also"), return a chat response asking for clarification unless conversation memory provides enough context.
+2. Never use Markdown or code fences.
+3. Never include explanations outside JSON.
+4. For a clear request to turn the light on or off,
+   use the device_control format above.
+5. Always use room "demo" and device "light"
+   for the connected demonstration LED.
+6. If the user requests a specific room, fan, AC,
+   or another device that is not connected, do not
+   pretend it is operational. Return a chat response
+   explaining that only the demo LED is currently connected.
+7. If the request is unclear, ask for clarification
+   using the chat format.
+8. For unrelated questions, use the chat format.
 
-------------------------------------------------
+CHAT FORMAT
 
-Device Control Format
+{{
+    "intent": "chat",
+    "message": "Your response here"
+}}
 
-{
-    "intent":"device_control",
-    "room":"",
-    "device":"",
-    "action":"on"
-}
-
-------------------------------------------------
-
-Chat Format
-
-{
-    "intent":"chat",
-    "message":""
-}
-
-------------------------------------------------
-
-Supported Rooms
-
-bedroom1
-bedroom2
-bedroom3
-bedroom4
-bedroom5
-living room
-tv room
-common room
-dining room
-kitchen
-sitout
-
-------------------------------------------------
-
-Supported Devices
-
-light
-fan
-ac
-
-Kitchen Devices
-
-light1
-light2
-light3
-fan1
-fan2
-fan3
-
-Dining Room Devices
-
-light
-fan1
-fan2
-
-------------------------------------------------
-
-Supported Actions
-
-on
-off
-
-------------------------------------------------
-
-Examples
-
-English:
-Turn on bedroom 1 light
-
-Malayalam:
-ബെഡ്റൂം 1 ലൈറ്റ് ഓൺ ചെയ്യൂ
-
-Hindi:
-बेडरूम 1 की लाइट चालू करो
-
-Tamil:
-படுக்கையறை 1 லைட்டை ஆன் பண்ணு
-
-Spanish:
-Enciende la luz del dormitorio 1
-
-French:
-Allume la lumière de la chambre 1
-
-German:
-Schalte das Licht im Schlafzimmer 1 ein
-
-Response
-
-{
-    "intent":"device_control",
-    "room":"bedroom1",
-    "device":"light",
-    "action":"on"
-}
-
-------------------------------------------------
-
-If the request is not related to smart home control,
-respond with:
-
-{
-    "intent":"chat",
-    "message":"..."
-}
-
-Return ONLY JSON.
+Return ONLY valid JSON.
 """
 
         try:
@@ -169,12 +92,16 @@ Return ONLY JSON.
 
             content = response["message"]["content"].strip()
 
-            # Remove markdown if model accidentally returns it
             content = content.replace("```json", "")
             content = content.replace("```", "")
             content = content.strip()
 
-            return json.loads(content)
+            result = json.loads(content)
+
+            if not isinstance(result, dict):
+                raise ValueError("AI response must be a JSON object.")
+
+            return result
 
         except json.JSONDecodeError:
 
@@ -184,13 +111,13 @@ Return ONLY JSON.
 
             return {
                 "intent": "chat",
-                "message": content
+                "message": "Sorry, I couldn't understand that command."
             }
 
-        except Exception as e:
+        except Exception as error:
 
             print("\n========== OLLAMA ERROR ==========")
-            print(e)
+            print(error)
             print("==================================\n")
 
             return {
